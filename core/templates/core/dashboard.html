@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Admin Tool</title> <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Стилизация под профессиональный софт */
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background-color: #2c3e50; }
+        .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 8px; }
+        .card-header { background-color: #fff; border-bottom: 1px solid #eee; font-weight: 600; color: #2c3e50; }
+        pre { background: #1e1e1e; color: #dcdcdc; padding: 15px; border-radius: 5px; font-family: 'Consolas', monospace; font-size: 0.85rem; }
+        .packet-table { font-size: 0.8rem; }
+        .badge-proto { width: 60px; }
+        .btn-action { background-color: #3498db; color: white; border: none; }
+        .btn-action:hover { background-color: #2980b9; color: white; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">Network Diagnostic Utility</span>
+        <span class="text-white-50 small">System: Windows NT</span>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Сетевые адаптеры</span>
+                    <span class="badge bg-secondary">Status: Online</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Интерфейс</th>
+                                    <th>IP адрес</th>
+                                    <th>Маска подсети</th>
+                                    <th class="text-end">Управление</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for iface in interfaces %}
+                                <tr>
+                                    <td class="fw-bold">{{ iface.name }}</td>
+                                    <td class="text-primary font-monospace">{{ iface.ip }}</td>
+                                    <td class="text-muted font-monospace">{{ iface.mask }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-action" data-bs-toggle="modal" data-bs-target="#modal{{ forloop.counter }}">Конфигурация</button>
+                                    </td>
+                                </tr>
+
+                                <div class="modal fade" id="modal{{ forloop.counter }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <form action="{% url 'configure_ip' %}" method="POST">
+                                            {% csrf_token %}
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Настройка: {{ iface.name }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="interface" value="{{ iface.name }}">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small text-muted">IP адрес (IPv4)</label>
+                                                        <input type="text" name="ip" class="form-control font-monospace" placeholder="192.168.x.x" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small text-muted">Маска подсети</label>
+                                                        <input type="text" name="mask" class="form-control font-monospace" value="255.255.255.0" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small text-muted">Основной шлюз</label>
+                                                        <input type="text" name="gateway" class="form-control font-monospace" placeholder="192.168.x.x">
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer bg-light">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                                    <button type="submit" class="btn btn-danger">Применить изменения</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span>Мониторинг трафика (Live Capture)</span>
+                    <form action="{% url 'sniff' %}" method="POST" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-light">Захват (15 пакетов)</button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    {% if packets %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped packet-table">
+                                <thead>
+                                    <tr>
+                                        <th>Протокол</th>
+                                        <th>Источник</th>
+                                        <th>Назначение</th>
+                                        <th>Размер</th>
+                                        <th>Данные</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in packets %}
+                                    <tr>
+                                        <td><span class="badge bg-secondary badge-proto">{{ p.proto }}</span></td>
+                                        <td class="font-monospace">{{ p.src }}</td>
+                                        <td class="font-monospace">{{ p.dst }}</td>
+                                        <td>{{ p.len }} B</td>
+                                        <td class="text-muted text-truncate" style="max-width: 300px;">{{ p.summary }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <p class="mb-0">Данные отсутствуют. Запустите захват пакетов.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Проверка доступности узла (ICMP)</div>
+                <div class="card-body">
+                    <form action="{% url 'ping' %}" method="POST" class="input-group mb-3">
+                        {% csrf_token %}
+                        <input type="text" name="host" class="form-control font-monospace" placeholder="Hostname or IP">
+                        <button class="btn btn-outline-dark">Execute Ping</button>
+                    </form>
+                    {% if ping_result %}
+                        <pre>{{ ping_result }}</pre>
+                    {% else %}
+                        <div class="text-muted small">Ожидание команды...</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">Таблица маршрутизации</div>
+                <div class="card-body">
+                    <pre style="max-height: 300px; overflow: auto;">{{ route_table }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
