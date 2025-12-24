@@ -25,7 +25,7 @@
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
-   install django psutil scapy
+   pip install django psutil scapy
    
 3. **Инициализируйте базу данных**
    ```bash
