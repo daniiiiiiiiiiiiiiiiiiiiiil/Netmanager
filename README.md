@@ -11,14 +11,14 @@
 ## Требования к системе
 * **ОС:** Windows 10/11.
 * **Python:** 3.10 или выше.
-* **Драйвер:** [Npcap]. 
+* **Драйвер:** Npcap. 
     * *При установке Npcap выберите опцию "Install Npcap in WinPcap API-compatible Mode".*
 
 ## Установка и запуск
 
 1. **Клонируйте репозиторий:**
    ```bash
-   git clone <ссылка_на_ваш_репозиторий>
+   git clone https://github.com/daniiiiiiiiiiiiiiiiiiiiiil/Netmanager/
    cd netmanager
    
 2. **Настройте окружение:**
